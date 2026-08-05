@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observability, Gateway Tools & Production Debugging // NovaPay AI Agent Training Lab 9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,800;0,9..144,900;1,9..144,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+:root{--ink:#0a0e0d;--paper:#ebe6dc;--paper-warm:#e3dccf;--accent:#ff5722;--accent-2:#f4a300;--blueprint:#0f3a5f;--blueprint-line:rgba(15,58,95,0.18);--danger:#c0392b;--success:#2d6a4f;--muted:#6b655d;--problem-bg:#1a1f1e;--problem-ink:#f4ede0;--lab-bg:#0a1f33;--code-bg:#0d1117;--code-ink:#c9d1d9;--code-comment:#7a8087;--code-keyword:#ff7b72;--code-string:#a5d6a4;--code-func:#79c0ff;}
+*{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}
+body{font-family:'Fraunces',Georgia,serif;background:var(--paper);color:var(--ink);line-height:1.6;font-size:17px;background-image:radial-gradient(circle at 20% 10%,rgba(255,87,34,0.04) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(15,58,95,0.05) 0%,transparent 50%);background-attachment:fixed;}
+body::before{content:"";position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");pointer-events:none;z-index:1;mix-blend-mode:multiply;}
+.wrap{position:relative;z-index:2;}
+/* ─ HERO ─ */
+.hero{padding:50px 6vw 60px;border-bottom:2px solid var(--ink);position:relative;overflow:hidden;}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--blueprint-line) 1px,transparent 1px),linear-gradient(90deg,var(--blueprint-line) 1px,transparent 1px);background-size:40px 40px;opacity:0.5;pointer-events:none;}
+.hero-top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:12px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.15em;position:relative;z-index:2;flex-wrap:wrap;gap:8px;}
+.hero-top .stamp{background:var(--accent);color:var(--paper);padding:4px 10px;transform:rotate(-2deg);display:inline-block;}
+.hero-title{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(36px,6.5vw,105px);line-height:0.85;letter-spacing:-0.04em;margin-top:30px;position:relative;z-index:2;}
+.hero-title .slash{color:var(--accent);font-style:italic;}
+.hero-title .sub{display:block;font-size:0.22em;font-weight:400;font-style:italic;letter-spacing:0em;color:var(--muted);margin-top:24px;line-height:1.4;max-width:820px;}
+.hero-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:50px;position:relative;z-index:2;padding-top:24px;border-top:1px solid var(--ink);}
+.hero-meta>div{font-family:'JetBrains Mono',monospace;}
+.hero-meta strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:0.2em;color:var(--muted);margin-bottom:6px;}
+.hero-meta span{font-size:16px;font-weight:700;font-family:'Fraunces',serif;}
+.hero-quote{position:relative;z-index:2;margin-top:40px;font-style:italic;font-size:18px;max-width:780px;border-left:3px solid var(--accent);padding:6px 0 6px 22px;}
+/* ─ RULES BAR ─ */
+.rules{padding:50px 6vw;background:var(--ink);color:var(--paper);border-bottom:2px solid var(--ink);}
+.rules-title{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:26px;color:var(--accent-2);}
+.rules-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;}
+.rule{border-left:3px solid var(--accent);padding:12px 0 12px 18px;}
+.rule-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:0.15em;margin-bottom:6px;}
+.rule h4{font-family:'Fraunces',serif;font-size:17px;font-weight:700;font-style:italic;margin-bottom:6px;}
+.rule p{font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:var(--paper-warm);line-height:1.5;}
+/* ─ TOC ─ */
+.toc{padding:40px 6vw;background:var(--paper-warm);border-bottom:2px solid var(--ink);}
+.toc-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:22px;color:var(--accent);}
+.toc-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+.toc-list li{background:var(--paper);border:1px solid var(--ink);padding:16px 18px;transition:transform 0.15s;}
+.toc-list li:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink);}
+.toc-list a{color:var(--ink);text-decoration:none;}
+.toc-num{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:11px;font-weight:700;}
+.toc-text{display:block;margin-top:4px;font-family:'Fraunces',serif;font-size:17px;font-weight:700;line-height:1.2;}
+.toc-tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:0.1em;text-transform:uppercase;display:block;}
+
+/* ─ SECTIONS ─ */
+.problem{padding:60px 6vw;border-bottom:1px solid var(--ink);}
+.problem:nth-child(even){background:var(--paper-warm);}
+.problem-header{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:end;border-bottom:3px solid var(--ink);padding-bottom:22px;margin-bottom:38px;}
+.problem-num{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:95px;line-height:0.8;color:var(--accent);letter-spacing:-0.04em;}
+.problem-titles h2{font-family:'Fraunces',serif;font-weight:800;font-size:clamp(20px,3vw,42px);line-height:0.95;letter-spacing:-0.02em;margin-bottom:8px;}
+
+.problem-meta{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:10px 14px;align-self:start;line-height:1.7;}
+
+.section{margin:30px 0;display:grid;grid-template-columns:130px 1fr;gap:34px;align-items:start;}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;padding:8px 10px;border:1px solid var(--ink);background:var(--paper);text-align:center;font-weight:700;position:sticky;top:20px;}
+.section-label.book{background:#1a0a30;color:#d4aaff;border-color:#2a1a40;}
+.section-label.anthro{background:#3a0060;color:#e0c8ff;border-color:#3a0060;}
+.section-label.concept{background:var(--blueprint);color:#fff;border-color:var(--blueprint);}
+.section-label.scenario{background:var(--problem-bg);color:var(--problem-ink);border-color:var(--problem-bg);}
+.section-label.arch{background:#060e18;color:#79c0ff;border-color:#1e2d3d;}
+.section-label.why{background:#2a1f1a;color:var(--accent-2);border-color:#3a2e00;}
+.section-label.compare{background:#1a1f00;color:#d4e840;border-color:#2a3000;}
+.section-label.real{background:#3a1a00;color:#ffcc80;border-color:#4a2800;}
+.section-label.career{background:#002a1a;color:#80ffcc;border-color:#003a22;}
+.section-label.fsm{background:#0a1f33;color:#79c0ff;border-color:#1e3a5f;}
+.section-body p{font-family:'Space Grotesk',sans-serif;font-size:15px;color:#3a3530;line-height:1.65;margin-bottom:13px;}
+/* ─ COMPONENTS ─ */
+.scenario-box{background:var(--problem-bg);color:var(--problem-ink);padding:30px 34px;border-left:6px solid var(--accent);position:relative;font-family:'Space Grotesk',sans-serif;}
+.scenario-box::before{content:attr(data-label);position:absolute;top:-10px;left:28px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+.scenario-box .lede{font-family:'Fraunces',serif;font-style:italic;font-size:19px;line-height:1.4;margin-bottom:14px;color:#fff;}
+.scenario-box p{font-size:14px;line-height:1.6;color:#c0bab2;margin-bottom:10px;}
+.diagram{background:#fafafa;border:1px solid var(--ink);padding:20px;margin:14px 0;text-align:center;position:relative;overflow-x:auto;}
+.diagram::before{content:attr(data-fig);position:absolute;top:8px;left:14px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.18em;color:var(--muted);}
+.analogy-box{background:var(--paper-warm);border:1px solid var(--ink);border-left:5px solid var(--accent-2);padding:22px 26px;margin:16px 0;position:relative;}
+.analogy-box::before{content:"ANALOGY";position:absolute;top:-10px;left:22px;background:var(--accent-2);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+.analogy-box .setup{font-family:'Fraunces',serif;font-style:italic;font-size:17px;color:var(--ink);line-height:1.4;margin-bottom:10px;}
+.analogy-box p{font-family:'Space Grotesk',sans-serif;font-size:14px;color:#3a3530;line-height:1.6;margin-bottom:6px;}
+.war-story{background:#2a1f1a;color:#f4ede0;padding:20px 26px;border-left:4px solid var(--accent-2);margin:16px 0;font-family:'Fraunces',serif;font-style:italic;font-size:15.5px;line-height:1.6;position:relative;}
+.war-story::before{content:attr(data-label);display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;color:var(--accent-2);margin-bottom:8px;font-style:normal;font-weight:700;}
+.note-box{background:rgba(244,163,0,0.10);border-left:3px solid var(--accent-2);padding:11px 16px;margin:12px 0;font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-style:italic;color:#3a3530;}
+.note-box strong{font-style:normal;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.15em;color:var(--accent-2);display:block;margin-bottom:4px;font-weight:700;}
+.lab-ref{display:flex;align-items:flex-start;gap:14px;background:#0a1a0a;border:1.5px solid #3fb950;border-left:4px solid #3fb950;padding:14px 18px;margin:18px 0;border-radius:3px;}
+.lab-ref-icon{font-size:22px;line-height:1;flex-shrink:0;margin-top:2px;}
+.lab-ref-body{flex:1;}
+.lab-ref-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;color:#3fb950;font-weight:700;text-transform:uppercase;margin-bottom:4px;}
+.lab-ref-title{font-family:'Fraunces',serif;font-size:15px;font-weight:800;color:#f0fff4;margin-bottom:4px;}
+.lab-ref-desc{font-family:'Space Grotesk',sans-serif;font-size:13px;color:#b0d8b8;line-height:1.5;}
+.practices-box{background:rgba(255,87,34,0.04);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);padding:20px 24px;margin:16px 0;}
+.practices-box h5{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;}
+.practices-box ul{list-style:none;padding:0;}
+.practices-box ul li{font-family:'Space Grotesk',sans-serif;font-size:14px;padding:8px 0 8px 26px;position:relative;border-bottom:1px dotted #d8d2c5;line-height:1.55;color:#3a3530;}
+.practices-box ul li:last-child{border:none;}
+.practices-box ul li::before{content:"▸";position:absolute;left:4px;color:var(--accent);font-weight:700;}
+.concept-table{background:#fff;border:1px solid var(--ink);overflow:hidden;margin:16px 0;}
+.concept-table table{width:100%;border-collapse:collapse;font-family:'Space Grotesk',sans-serif;font-size:13px;}
+.concept-table th{background:var(--ink);color:var(--paper);font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.15em;text-transform:uppercase;padding:9px 13px;text-align:left;}
+.concept-table td{padding:9px 13px;border-bottom:1px solid #d8d2c5;vertical-align:top;line-height:1.45;color:#3a3530;}
+.concept-table tr:last-child td{border-bottom:none;}
+.concept-table td:first-child{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);white-space:nowrap;}
+.fsm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0;}
+.fsm-term{background:#fff;border:1px solid var(--ink);padding:15px 18px;border-left:4px solid var(--accent);}
+.fsm-term .term{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;}
+.fsm-term p{font-family:'Space Grotesk',sans-serif;font-size:13px;color:#3a3530;line-height:1.5;margin:0;}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0;}
+.compare-grid .col{background:#fff;border:1px solid var(--ink);padding:18px 20px;}
+.compare-grid .col-head{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid;}
+.compare-grid .col:first-child .col-head{color:var(--danger);border-color:var(--danger);}
+.compare-grid .col:last-child .col-head{color:var(--success);border-color:var(--success);}
+.compare-grid .col ul{list-style:none;padding:0;font-family:'Space Grotesk',sans-serif;font-size:13px;}
+.compare-grid .col ul li{padding:5px 0;border-bottom:1px dotted #d8d2c5;line-height:1.5;color:#3a3530;}
+.compare-grid .col ul li:last-child{border:none;}
+.pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;margin:18px 0;}
+.pattern-card{background:#fff;border:1px solid var(--ink);border-top:4px solid var(--accent);padding:20px;}
+.pattern-card .pc-num{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;color:var(--accent);font-weight:700;margin-bottom:6px;}
+.pattern-card h4{font-family:'Fraunces',serif;font-size:19px;font-weight:800;margin-bottom:8px;line-height:1.1;}
+.pattern-card p{font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#3a3530;line-height:1.5;margin-bottom:7px;}
+.pattern-card .when{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--success);font-weight:700;margin-top:8px;padding-top:7px;border-top:1px dashed #d8d2c5;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0;}
+.stat-card{background:var(--ink);color:var(--paper);padding:20px 18px;border-left:4px solid var(--accent);}
+.stat-card .num{font-family:'Fraunces',serif;font-size:38px;font-weight:900;color:var(--accent);line-height:1;letter-spacing:-0.03em;}
+.stat-card .label{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent-2);margin-top:4px;}
+.stat-card .desc{font-family:'Space Grotesk',sans-serif;font-size:11.5px;color:#a8a090;margin-top:7px;line-height:1.4;}
+.era-timeline{margin:18px 0;border-left:3px solid var(--accent);}
+.era{display:grid;grid-template-columns:115px 1fr;}
+.era-year{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:var(--accent);padding:13px 14px;background:var(--ink);border-bottom:1px solid #2a2e2d;}
+.era-content{padding:13px 18px;background:#fff;border-bottom:1px solid #d8d2c5;}
+.era-content strong{font-family:'Fraunces',serif;font-size:15px;font-weight:800;display:block;margin-bottom:3px;}
+.era-content p{font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#3a3530;line-height:1.5;margin:0;}
+.era:last-child .era-year,.era:last-child .era-content{border-bottom:none;}
+.big-quote{font-family:'Fraunces',serif;font-style:italic;font-size:clamp(17px,2.2vw,24px);line-height:1.35;color:var(--ink);border-left:5px solid var(--accent);padding:14px 0 14px 26px;margin:22px 0;background:rgba(255,87,34,0.03);}
+.big-quote cite{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-style:normal;color:var(--muted);margin-top:8px;letter-spacing:0.12em;}
+.industry-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:18px 0;}
+.industry-card{background:#fff;border:1px solid var(--ink);padding:20px;border-top:4px solid var(--accent);}
+.industry-card .ic-sector{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px;}
+.industry-card h4{font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:8px;line-height:1.2;}
+.industry-card p{font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#3a3530;line-height:1.5;margin-bottom:7px;}
+.industry-card .impact{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--success);font-weight:700;margin-top:8px;padding-top:7px;border-top:1px dashed #d8d2c5;}
+.skill-stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0;}
+.skill-tier{padding:16px 18px;border:1px solid var(--ink);}
+.skill-tier.t1{background:#c0392b;color:#fff;}
+.skill-tier.t2{background:#f4a300;color:var(--ink);}
+.skill-tier.t3{background:var(--success);color:#fff;}
+.skill-tier.t4{background:var(--blueprint);color:#fff;}
+.skill-tier .tier-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;font-weight:700;margin-bottom:7px;opacity:0.8;}
+.skill-tier .tier-name{font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:8px;line-height:1.1;}
+.skill-tier ul{list-style:none;padding:0;font-family:'Space Grotesk',sans-serif;font-size:12px;line-height:1.5;}
+.skill-tier ul li{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.15);}
+.skill-tier ul li:last-child{border:none;}
+/* ─ API FLOW SECTION ─ */
+.section-label.api{background:#060e18;color:#f4a300;border-color:#1e2d3d;}
+.section-label.token{background:#1a0a30;color:#d4aaff;border-color:#2a1a40;}
+.stage-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:18px 0;border:2px solid var(--ink);border-radius:4px;overflow:hidden;}
+.stage-pill{padding:12px 10px;text-align:center;border-right:1px solid var(--ink);background:#fff;}
+.stage-pill:last-child{border-right:none;}
+.stage-pill.active{background:var(--ink);color:var(--paper);}
+.stage-pill .sp-num{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;font-weight:700;margin-bottom:5px;color:var(--accent);}
+.stage-pill.active .sp-num{color:var(--accent-2);}
+.stage-pill .sp-name{font-family:'Fraunces',serif;font-size:13px;font-weight:800;line-height:1.2;color:var(--ink);}
+.stage-pill.active .sp-name{color:#fff;}
+.api-components{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:18px 0;}
+.api-comp{border:1px solid var(--ink);background:#fff;padding:20px;}
+.api-comp .ac-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid;}
+.api-comp:nth-child(1) .ac-label{color:#7c3aed;border-color:#7c3aed;}
+.api-comp:nth-child(2) .ac-label{color:var(--accent);border-color:var(--accent);}
+.api-comp:nth-child(3) .ac-label{color:var(--blueprint);border-color:var(--blueprint);}
+.api-comp h4{font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:8px;}
+.api-comp p{font-family:'Space Grotesk',sans-serif;font-size:13px;color:#3a3530;line-height:1.5;margin-bottom:6px;}
+.api-comp .ac-key{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:3px 8px;display:inline-block;margin-top:6px;}
+.api-comp:nth-child(1) .ac-key{background:#f0e8ff;color:#7c3aed;}
+.api-comp:nth-child(2) .ac-key{background:#fff0ec;color:var(--accent);}
+.api-comp:nth-child(3) .ac-key{background:#e8f0ff;color:var(--blueprint);}
+.token-flow{background:#fff;border:1px solid var(--ink);padding:22px;margin:16px 0;}
+.token-flow .tf-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;font-weight:700;}
+.token-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin:10px 0;}
+.token-box{background:#f0e8ff;border:1px solid #7c3aed;padding:8px 14px;font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#3a0060;border-radius:4px;}
+.token-box.eos{background:#0a0e0d;color:var(--accent-2);border-color:#0a0e0d;}
+.embed-col{background:#f8f5f0;border:1px solid #d8d2c5;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#3a3530;line-height:1.8;border-radius:4px;min-width:70px;text-align:center;}
+.embed-col .ec-num{color:#7c3aed;}
+.prob-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;}
+.prob-box{background:#fff;border:2px solid var(--ink);padding:12px 16px;text-align:center;border-radius:4px;min-width:90px;}
+.prob-box .pb-pct{font-family:'Fraunces',serif;font-size:24px;font-weight:900;color:var(--accent);display:block;}
+.prob-box .pb-word{font-family:'Space Grotesk',sans-serif;font-size:12px;color:#3a3530;font-weight:600;}
+.prob-box.winner{background:var(--ink);border-color:var(--ink);}
+.prob-box.winner .pb-pct{color:var(--accent-2);}
+.prob-box.winner .pb-word{color:#fff;}
+.response-table{background:#fff;border:1px solid var(--ink);overflow:hidden;margin:16px 0;}
+.response-table table{width:100%;border-collapse:collapse;font-family:'Space Grotesk',sans-serif;font-size:13px;}
+.response-table th{background:var(--blueprint);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.15em;text-transform:uppercase;padding:9px 13px;text-align:left;}
+.response-table td{padding:9px 13px;border-bottom:1px solid #d8d2c5;vertical-align:top;line-height:1.45;color:#3a3530;}
+.response-table tr:last-child td{border-bottom:none;}
+.response-table td:first-child{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);}
+.stop-conditions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;}
+.stop-cond{background:#fff;border:1px solid var(--ink);border-top:3px solid var(--accent);padding:16px;}
+.stop-cond .sc-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.15em;color:var(--accent);font-weight:700;margin-bottom:6px;}
+.stop-cond h5{font-family:'Fraunces',serif;font-size:16px;font-weight:800;margin-bottom:8px;}
+.stop-cond p{font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#3a3530;line-height:1.5;margin:0;}
+pre.api-code{background:var(--code-bg);color:var(--code-ink);padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.65;overflow-x:auto;margin:14px 0;border-left:3px solid var(--accent);position:relative;white-space:pre;tab-size:2;}
+pre.api-code::before{content:attr(data-lang);position:absolute;top:8px;right:14px;font-size:9.5px;color:var(--code-comment);letter-spacing:0.15em;text-transform:uppercase;}
+.copy-wrap{position:relative;}
+.copy-btn{position:absolute;top:0;right:0;background:#1f6feb;border:none;color:#fff;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;letter-spacing:0.14em;padding:6px 14px;cursor:pointer;transition:all 0.18s;z-index:5;text-transform:uppercase;}
+.copy-btn:hover{background:#388bfd;}
+.copy-btn.copied{background:#1a3a1a;color:#3fb950;}
+.tok-c{color:var(--code-comment);font-style:italic;}.tok-k{color:#ff7b72;}.tok-s{color:#a5d6a4;}.tok-f{color:#79c0ff;}.tok-v{color:#e3b341;}
+.gotcha-box{background:var(--danger);color:#fff;padding:24px 28px;margin:16px 0;border-left:6px solid #000;position:relative;}
+.gotcha-box::before{content:"✱ WATCH OUT";position:absolute;top:-11px;left:22px;background:#000;color:var(--accent-2);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+.gotcha-box h4{font-family:'Fraunces',serif;font-size:19px;font-weight:700;margin-bottom:10px;}
+.gotcha-box ul{list-style:none;padding:0;font-family:'Space Grotesk',sans-serif;font-size:13.5px;}
+.gotcha-box ul li{padding:5px 0 5px 22px;position:relative;line-height:1.5;border-bottom:1px solid rgba(255,255,255,0.15);}
+.gotcha-box ul li:last-child{border:none;}
+.gotcha-box ul li::before{content:"✗";position:absolute;left:3px;color:var(--accent-2);font-weight:700;}
+@media(max-width:700px){.stage-strip,.api-components,.stop-conditions{grid-template-columns:1fr;}.prob-row,.token-row{flex-direction:column;}}
+.outro{padding:70px 6vw;background:var(--ink);color:var(--paper);text-align:center;border-top:4px solid var(--accent);}
+.outro h2{font-family:'Fraunces',serif;font-weight:900;font-style:italic;font-size:clamp(28px,5vw,68px);line-height:0.95;letter-spacing:-0.03em;margin-bottom:22px;}
+.outro h2 em{color:var(--accent);font-style:normal;}
+.outro p{font-family:'Fraunces',serif;font-size:17px;font-style:italic;max-width:640px;margin:0 auto 16px;color:var(--paper-warm);}
+.outro .sig{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.28em;color:var(--accent-2);margin-top:44px;}
+.copyright{margin-top:36px;padding-top:24px;border-top:1px solid rgba(235,230,220,0.15);font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:#6b655d;line-height:1.9;}
+@media(max-width:900px){.hero-meta{grid-template-columns:repeat(2,1fr);}.problem-header{grid-template-columns:1fr;gap:10px;}.problem-num{font-size:70px;}.section{grid-template-columns:1fr;gap:10px;}.section-label{position:static;display:inline-block;}.compare-grid,.fsm-grid,.pattern-grid{grid-template-columns:1fr;}.era{grid-template-columns:85px 1fr;}}
+
+/* ─── TEACHING SCRIPT COMPONENTS ─── */
+.beat{margin:26px 0;padding-left:18px;border-left:2px solid #d8d2c5;}
+.beat-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.beat-num{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.18em;color:var(--accent);font-weight:800;background:var(--ink);padding:4px 9px;}
+.beat-title{font-family:'Fraunces',serif;font-size:21px;font-weight:800;line-height:1.15;}
+.timing{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.14em;color:var(--muted);border:1px solid #d8d2c5;padding:3px 8px;text-transform:uppercase;}
+
+.say{background:#fff;border:1px solid var(--ink);border-left:5px solid var(--blueprint);padding:20px 24px 18px;margin:14px 0;position:relative;font-family:'Fraunces',serif;font-size:16.5px;line-height:1.68;color:#221f1c;}
+.say::before{content:"SAY";position:absolute;top:-10px;left:20px;background:var(--blueprint);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.22em;padding:3px 10px;font-weight:700;}
+.say p{margin-bottom:11px;}
+.say p:last-child{margin-bottom:0;}
+.say em{color:var(--blueprint);font-style:italic;}
+.say strong{font-weight:800;}
+
+.dothis{background:#0a1f33;color:#cfe3f5;padding:16px 22px;margin:14px 0;position:relative;font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.6;border-left:5px solid #79c0ff;}
+.dothis::before{content:"DO";position:absolute;top:-10px;left:20px;background:#79c0ff;color:#06121f;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.22em;padding:3px 10px;font-weight:700;}
+.dothis code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#ffcc80;}
+
+.askroom{background:rgba(244,163,0,0.10);border:1px dashed var(--accent-2);padding:16px 22px;margin:14px 0;position:relative;font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.6;color:#3a3530;}
+.askroom::before{content:"ASK THE ROOM";position:absolute;top:-10px;left:20px;background:var(--accent-2);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.22em;padding:3px 10px;font-weight:700;}
+.askroom .expect{display:block;margin-top:9px;padding-top:9px;border-top:1px dotted #c9a24d;font-style:italic;color:#6b5a2e;}
+
+.whybox{background:rgba(255,87,34,0.06);border-left:5px solid var(--accent);padding:17px 22px;margin:14px 0;position:relative;font-family:'Space Grotesk',sans-serif;font-size:14px;line-height:1.62;color:#3a3530;}
+.whybox::before{content:"WHY THIS MATTERS TO NOVAPAY";position:absolute;top:-10px;left:20px;background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+
+.tradeoff{background:var(--problem-bg);color:var(--problem-ink);padding:18px 24px;margin:14px 0;position:relative;font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.62;border-left:5px solid #d4e840;}
+.tradeoff::before{content:"TRADE-OFF — BE HONEST ABOUT THIS";position:absolute;top:-10px;left:20px;background:#d4e840;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+.tradeoff strong{color:#d4e840;}
+
+.watchfor{background:#4a1410;color:#ffd9d4;padding:16px 22px;margin:14px 0;position:relative;font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.6;border-left:5px solid var(--danger);}
+.watchfor::before{content:"WATCH FOR — COMMON CONFUSION";position:absolute;top:-10px;left:20px;background:var(--danger);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.2em;padding:3px 10px;font-weight:700;}
+
+.codewalk{border:1px solid var(--ink);margin:16px 0;background:#fff;}
+.codewalk .cw-head{background:var(--ink);color:var(--paper);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;padding:8px 14px;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.codewalk .cw-head span:last-child{color:var(--accent-2);}
+.codewalk pre{background:var(--code-bg);color:var(--code-ink);padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;white-space:pre;}
+.codewalk .cw-body{padding:16px 20px;font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.62;color:#3a3530;}
+.codewalk .cw-body p{margin-bottom:9px;}
+.codewalk .cw-body p:last-child{margin-bottom:0;}
+.codewalk .cw-line{font-family:'JetBrains Mono',monospace;font-size:11px;background:#f0ece3;padding:1px 5px;color:var(--ink);}
+
+.glossary{background:#fff;border:1px solid var(--ink);margin:16px 0;}
+.glossary dl{margin:0;padding:0;}
+.glossary dt{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--accent);background:#faf7f1;padding:9px 16px 4px;letter-spacing:0.05em;}
+.glossary dd{font-family:'Space Grotesk',sans-serif;font-size:13.5px;line-height:1.55;color:#3a3530;margin:0;padding:0 16px 11px;border-bottom:1px dotted #d8d2c5;}
+.glossary dd:last-child{border-bottom:none;}
+
+.runsheet{background:#fff;border:2px solid var(--ink);margin:18px 0;}
+.runsheet table{width:100%;border-collapse:collapse;font-family:'Space Grotesk',sans-serif;font-size:13px;}
+.runsheet th{background:var(--blueprint);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.15em;text-transform:uppercase;padding:9px 13px;text-align:left;}
+.runsheet td{padding:8px 13px;border-bottom:1px solid #d8d2c5;vertical-align:top;line-height:1.45;color:#3a3530;}
+.runsheet td:first-child{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;white-space:nowrap;color:var(--ink);}
+.runsheet tr:last-child td{border-bottom:none;}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ════════════════════════ HERO ════════════════════════ -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-top">
+    <span>NovaPay AI Agent Training // Lab 9</span>
+    <span class="stamp">Observability &amp; Debugging</span>
+    <span>Level 100 &middot; 200 &middot; 300 &middot; 400</span>
+  </div>
+  <h1 class="hero-title">
+    Dark Tuesday<span class="slash">.</span>
+    <span class="sub">A $91,500 cross-border transfer sailed through fraud scoring with a clean bill of health. The sender had three high-risk flags. Nobody knew for fourteen hours &mdash; because the agent was a black box.</span>
+  </h1>
+  <div class="hero-meta">
+    <div><strong>Lab</strong><span>9 &mdash; Observability</span></div>
+    <div><strong>Duration</strong><span>~90 minutes</span></div>
+    <div><strong>Cost</strong><span>~35 cents</span></div>
+    <div><strong>Prereq</strong><span>Labs 1&ndash;8</span></div>
+  </div>
+  <div class="hero-quote">
+    The agent approved the transaction. The tools returned the right data. The bug was in the space between them &mdash; and without tracing, that space does not exist.
+  </div>
+</header>
+
+<!-- ════════════════════════ RULES BAR ════════════════════════ -->
+<section class="rules">
+  <div class="rules-title">// the level path &mdash; what changes at each stage</div>
+  <div class="rules-grid">
+    <div class="rule"><div class="rule-num">LEVEL 100</div><h4>The Incident.</h4><p>Dark Tuesday: a real-shaped production failure caused by a parameter gap between two tool calls. Why traditional logging cannot diagnose it. What observability means for non-deterministic agents.</p></div>
+    <div class="rule"><div class="rule-num">LEVEL 200</div><h4>Instrumented Tools.</h4><p>OpenTelemetry SDK, InMemorySpanExporter, custom spans with attributes that encode the root cause. The single attribute that would have found the bug in two minutes.</p></div>
+    <div class="rule"><div class="rule-num">LEVEL 300</div><h4>End-to-End Tracing.</h4><p>Gateway with CloudWatch log delivery for APPLICATION_LOGS and TRACES. Lambda, Cognito, IAM role, MCP client call. Spans from agent through gateway to tool and back.</p></div>
+    <div class="rule"><div class="rule-num">LEVEL 400</div><h4>Production Ops.</h4><p>CloudWatch alarms, X-Ray sampling strategy, cost analysis, session correlation with OTEL baggage, and the ongoing cost of maintaining observability as the system evolves.</p></div>
+  </div>
+</section>
+
+<!-- ════════════════════════ TOC ════════════════════════ -->
+<section class="toc">
+  <div class="toc-title">// complete contents</div>
+  <ul class="toc-list">
+    <li><a href="#incident"><span class="toc-num">01</span><span class="toc-text">The Customer Problem: Dark Tuesday</span><span class="toc-tag">$91,500 &middot; 14 hours blind</span></a></li>
+    <li><a href="#agents-differ"><span class="toc-num">02</span><span class="toc-text">Why Observability Is Different for AI Agents</span><span class="toc-tag">deterministic vs non-deterministic</span></a></li>
+    <li><a href="#stack"><span class="toc-num">03</span><span class="toc-text">The Observability Stack</span><span class="toc-tag">OTEL &middot; CloudWatch &middot; AgentCore</span></a></li>
+    <li><a href="#objective"><span class="toc-num">04</span><span class="toc-text">Lab Objective: Black Box to Glass Box</span><span class="toc-tag">14 hours &rarr; 2 minutes</span></a></li>
+    <li><a href="#instrumented"><span class="toc-num">05</span><span class="toc-text">Level 200: Instrumented Tools</span><span class="toc-tag">spans &middot; attributes &middot; events</span></a></li>
+    <li><a href="#gateway-obs"><span class="toc-num">06</span><span class="toc-text">Level 300: Gateway Observability Wiring</span><span class="toc-tag">log delivery &middot; X-Ray</span></a></li>
+    <li><a href="#ab-compare"><span class="toc-num">07</span><span class="toc-text">The A/B Comparison: Finding the Bug</span><span class="toc-tag">uninstrumented vs instrumented</span></a></li>
+    <li><a href="#prod-ops"><span class="toc-num">08</span><span class="toc-text">Level 400: Production Operations</span><span class="toc-tag">alarms &middot; sampling &middot; cost</span></a></li>
+    <li><a href="#patterns"><span class="toc-num">09</span><span class="toc-text">Production Patterns &amp; Failure Modes</span><span class="toc-tag">what breaks &middot; what to watch</span></a></li>
+    <li><a href="#knowledge"><span class="toc-num">10</span><span class="toc-text">Knowledge Check &amp; Customer Questions</span><span class="toc-tag">concept Qs &middot; scenario Qs</span></a></li>
+  </ul>
+</section>
+
+<!-- ════════════════════════ 01 ════════════════════════ -->
+<section class="problem" id="incident">
+  <div class="problem-header">
+    <div class="problem-num">01</div>
+    <div class="problem-titles"><h2>The Customer Problem: Dark Tuesday.</h2></div>
+    <div class="problem-meta">LEVEL 100<br>THE INCIDENT</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label scenario">Start Here</div>
+    <div class="section-body">
+      <div class="say">
+        <p>Lab 7 gave our agents memory. Lab 8 gave them a governed front door. Both are running in production. And last Tuesday, the fraud-scoring agent approved a $91,500 cross-border transfer that should have been blocked.</p>
+        <p>Nobody noticed for <strong>fourteen hours</strong>. When they did, it took the full engineering team another six hours just to find the root cause. The agent was a <em>black box</em>.</p>
+        <p>Today we fix that. By the end of this lab, you will reproduce the same bug and find the root cause in <strong>two minutes</strong>.</p>
+      </div>
+
+      <div class="scenario-box" data-label="INCIDENT REPORT &mdash; DARK TUESDAY">
+        <div class="lede">NovaPay's fraud-scoring agent processed transaction TXN-DT-091 &mdash; a $91,500 cross-border transfer from NGN (Nigerian Naira) to GHS (Ghanaian Cedi). The sender had three high-risk flags. The agent approved it.</div>
+        <p>The agent called two tools in sequence: <code style="font-family:monospace;font-size:12px;color:#ffcc80;">check_sender_history</code> to pull the sender profile, and <code style="font-family:monospace;font-size:12px;color:#ffcc80;">score_transaction_risk</code> to compute a risk score.</p>
+        <p>The history check returned <code style="font-family:monospace;font-size:12px;color:#ffcc80;">sender_flags=3</code> &mdash; high risk. But the scoring function has a default parameter: <code style="font-family:monospace;font-size:12px;color:#ffcc80;">sender_flags: int = 0</code>. The model called both tools independently rather than chaining the output of the first into the input of the second.</p>
+        <p>With <code style="font-family:monospace;font-size:12px;color:#ffcc80;">sender_flags=0</code> (the default), the risk score was <strong>45 &mdash; approve</strong>. With the actual <code style="font-family:monospace;font-size:12px;color:#ffcc80;">sender_flags=3</code>, the score would have been <strong>99 &mdash; block</strong>.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Field</th><th>Value</th><th>Significance</th></tr></thead>
+          <tbody>
+            <tr><td>TXN ID</td><td>TXN-DT-091</td><td>The transaction that started the investigation</td></tr>
+            <tr><td>Amount</td><td>$91,500</td><td>Well above the $50K threshold for enhanced scrutiny</td></tr>
+            <tr><td>Corridor</td><td>NGN &rarr; GHS</td><td>Cross-border, higher regulatory reporting requirement</td></tr>
+            <tr><td>sender_flags</td><td>3 (from check_sender_history)</td><td>High risk &mdash; prior chargebacks, velocity spike, new corridor</td></tr>
+            <tr><td>sender_flags used</td><td>0 (default in score_transaction_risk)</td><td>The model never passed the actual value</td></tr>
+            <tr><td>Risk score</td><td>45 (approve)</td><td>Would have been 99 (block) with correct flags</td></tr>
+            <tr><td>Time to detect</td><td>14 hours</td><td>Manual reconciliation by the compliance team</td></tr>
+            <tr><td>Time to root-cause</td><td>6 hours (after detection)</td><td>Log-diving across three services with no trace correlation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="askroom">
+        "Look at the incident table. The agent called both tools and both tools returned correct data. So where is the bug?"
+        <span class="expect">Students will initially guess the scoring function is broken, or that sender_flags was corrupted. The real answer: the bug is in the gap between the two tools. The model called them independently &mdash; it got the flags from one tool and the score from another, but never connected them. No single tool has a bug. The orchestration is the bug. And without tracing, that gap is invisible.</span>
+      </div>
+
+      <div class="whybox">
+        Without observability, the compliance team's question &mdash; "why was this approved?" &mdash; requires reading CloudWatch logs from three services, correlating by timestamp, and manually reconstructing the call sequence. With OTEL tracing, the answer is a single trace ID query: open the trace, see that <code style="font-family:monospace;font-size:12px;">sender_flags_input=0</code> and <code style="font-family:monospace;font-size:12px;">used_default_flags=True</code>, and the root cause is on screen in under two minutes.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 02 ════════════════════════ -->
+<section class="problem" id="agents-differ">
+  <div class="problem-header">
+    <div class="problem-num">02</div>
+    <div class="problem-titles"><h2>Why Observability Is Different for AI Agents.</h2></div>
+    <div class="problem-meta">LEVEL 100<br>THE CONCEPT</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label why">Why This Is Hard</div>
+    <div class="section-body">
+      <div class="say">
+        <p>You already know how to instrument a web service. Request comes in, handler runs, response goes out. You log the status code and the latency. If something breaks, you search by request ID. That model <em>does not work</em> for agents.</p>
+        <p>An agent's execution path is <strong>non-deterministic</strong>. The same input can produce different tool sequences, different parameter choices, different numbers of steps. The model is making reasoning decisions at every step, and each decision is invisible unless you instrument it.</p>
+      </div>
+
+      <div class="compare-grid">
+        <div class="col">
+          <div class="col-head">Traditional App Observability</div>
+          <ul>
+            <li>Request &rarr; handler &rarr; response (deterministic path)</li>
+            <li>HTTP status codes tell you pass/fail</li>
+            <li>One call per request &mdash; latency is a single number</li>
+            <li>Parameters come from the caller (known, validated)</li>
+            <li>Bugs are in the code &mdash; reproduce with the same input</li>
+            <li>Logging the response body is usually sufficient</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="col-head">AI Agent Observability</div>
+          <ul>
+            <li>Multi-step reasoning &mdash; path chosen at runtime by the model</li>
+            <li>Every tool call returns 200 OK even when the data is wrong</li>
+            <li>Multiple tool calls per request &mdash; latency is a tree</li>
+            <li>Parameters chosen by the model (may use defaults silently)</li>
+            <li>Bugs are in the orchestration gap &mdash; same input, different trace</li>
+            <li>You must log what the model <em>chose</em>, not just what the tool <em>returned</em></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>THE KEY INSIGHT FOR THE ROOM</strong>
+        In Dark Tuesday, both tool calls returned HTTP 200. Both tools executed correctly. The bug is that the model used a default parameter instead of chaining one tool's output into another's input. No amount of HTTP-level monitoring catches this. You need to see <em>what arguments the model chose</em> and <em>whether those arguments came from a previous tool's output or from a default value</em>.
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Concept</th><th>Definition</th><th>NovaPay Example</th></tr></thead>
+          <tbody>
+            <tr><td>Trace</td><td>The full lifecycle of a single request through the system, from agent invocation to final response</td><td>The entire fraud-scoring session for TXN-DT-091 &mdash; both tool calls, the model's reasoning, the final approval</td></tr>
+            <tr><td>Span</td><td>A single unit of work within a trace &mdash; a function call, a tool invocation, a model inference</td><td><code style="font-family:monospace;font-size:11px;">check_sender_history</code> is one span; <code style="font-family:monospace;font-size:11px;">score_transaction_risk</code> is another; each has a parent span (the agent loop)</td></tr>
+            <tr><td>Attribute</td><td>A key-value pair attached to a span that records a specific fact about the operation</td><td><code style="font-family:monospace;font-size:11px;">novapay.sender_flags_input=0</code>, <code style="font-family:monospace;font-size:11px;">novapay.used_default_flags=True</code></td></tr>
+            <tr><td>Event</td><td>A timestamped annotation on a span, recording something noteworthy that happened during execution</td><td><code style="font-family:monospace;font-size:11px;">risk_warning: high_amount_with_default_flags</code> &mdash; fires when the amount is large but flags are suspiciously zero</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="analogy-box">
+        <div class="setup">Think of an airline's flight data recorder &mdash; the black box.</div>
+        <p>You do not need the flight recorder for the 99.97% of flights that land safely. But when one does not, the recorder is the <em>only</em> thing that tells you what happened. You cannot go back and add one after the crash.</p>
+        <p>OTEL instrumentation is the same. The overhead is negligible (~2ms per span). The cost of not having it is fourteen hours of log-diving when something goes wrong &mdash; and in a regulated business, a compliance incident report that says "we don't know why this was approved."</p>
+      </div>
+
+      <div class="watchfor">
+        Students will ask: "Why not just add more logging?" This is the most important distinction to land. <strong>Logs are unstructured text.</strong> You can grep them, but you cannot query them by parameter value, correlate them across services, or build alarms on structured fields. <strong>Spans with attributes are structured data.</strong> You can query "show me every trace where <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code> AND <code style="font-family:monospace;font-size:11px;">amount &gt; 50000</code>" &mdash; and that query is the one that finds Dark Tuesday in two minutes.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 03 ════════════════════════ -->
+<section class="problem" id="stack">
+  <div class="problem-header">
+    <div class="problem-num">03</div>
+    <div class="problem-titles"><h2>The Observability Stack: OpenTelemetry + CloudWatch + AgentCore.</h2></div>
+    <div class="problem-meta">LEVEL 100<br>ARCHITECTURE</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label arch">Three Layers</div>
+    <div class="section-body">
+      <div class="say">
+        <p>There are three places where telemetry is generated and three places where it lands. Understanding which layer captures what &mdash; and what falls through the cracks if you skip one &mdash; is the architecture decision in this lab.</p>
+      </div>
+
+      <div class="diagram" data-fig="FIG 3.1 &mdash; THE OBSERVABILITY STACK">
+<pre style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;text-align:left;display:inline-block;margin:14px 0;">
+  LAYER 1: AGENT-SIDE               LAYER 2: GATEWAY-SIDE           LAYER 3: BACKENDS
+  (your code)                       (AgentCore built-in)             (CloudWatch / X-Ray)
+  ┌─────────────────────┐           ┌──────────────────────┐         ┌──────────────────┐
+  │  OTEL SDK           │           │  AgentCore Gateway   │         │  CloudWatch Logs │
+  │  ┌───────────────┐  │  MCP/JWT  │  ┌────────────────┐  │  logs   │  ┌──────────────┐│
+  │  │TracerProvider  │  │─────────▶│  │Built-in tracing │  │───────▶│  │APPLICATION   ││
+  │  │InMemorySpan   │  │           │  │Request logging  │  │        │  │_LOGS group   ││
+  │  │  Exporter     │  │           │  │Error capture    │  │        │  └──────────────┘│
+  │  └───────────────┘  │           │  └────────────────┘  │         │                  │
+  │                     │           │                      │  traces │  ┌──────────────┐│
+  │  Custom spans:      │           │  Log delivery:       │───────▶│  │X-Ray traces  ││
+  │  - tool args        │           │  - put_delivery_     │         │  │(TRACES)      ││
+  │  - default flags    │           │    source            │         │  └──────────────┘│
+  │  - risk warnings    │           │  - put_delivery_     │         │                  │
+  │  - session baggage  │           │    destination       │         │  ┌──────────────┐│
+  │                     │           │  - create_delivery   │         │  │Alarms        ││
+  │  (dev: in-memory)   │           │                      │         │  │(errors, SLA) ││
+  │  (prod: ADOT)       │           │  Two deliveries:     │         │  └──────────────┘│
+  └─────────────────────┘           │  1. APPLICATION_LOGS │         └──────────────────┘
+                                    │  2. TRACES           │
+                                    └──────────────────────┘</pre>
+      </div>
+
+      <div class="api-components">
+        <div class="api-comp">
+          <div class="ac-label">Layer 1 &mdash; Agent-Side</div>
+          <h4>What you instrument</h4>
+          <p>Custom spans on every tool call, recording the arguments the model chose, whether defaults were used, domain-specific warnings. In dev, spans go to InMemorySpanExporter (zero infrastructure). In prod, to ADOT Collector.</p>
+          <p><strong>Captures:</strong> model decisions, parameter choices, tool chaining gaps</p>
+          <div class="ac-key">THE MODEL'S REASONING TRAIL</div>
+        </div>
+        <div class="api-comp">
+          <div class="ac-label">Layer 2 &mdash; Gateway-Side</div>
+          <h4>What AgentCore captures</h4>
+          <p>Built-in request logging, authentication events, tool dispatch, error states. Configured via CloudWatch log delivery &mdash; two deliveries, one for APPLICATION_LOGS (to CloudWatch Logs), one for TRACES (to X-Ray).</p>
+          <p><strong>Captures:</strong> auth decisions, gateway routing, infrastructure errors</p>
+          <div class="ac-key">THE INFRASTRUCTURE TRAIL</div>
+        </div>
+        <div class="api-comp">
+          <div class="ac-label">Layer 3 &mdash; Backend</div>
+          <h4>Where it all lands</h4>
+          <p>CloudWatch Logs for searchable log events. X-Ray for distributed trace visualization. CloudWatch Alarms for proactive alerting on error rates, latency, and custom metrics.</p>
+          <p><strong>Captures:</strong> the queryable, alertable, auditable record</p>
+          <div class="ac-key">THE COMPLIANCE ANSWER</div>
+        </div>
+      </div>
+
+      <div class="compare-grid">
+        <div class="col">
+          <div class="col-head">With Agent Logs Only</div>
+          <ul>
+            <li>"The agent approved TXN-DT-091"</li>
+            <li>No visibility into which tools were called</li>
+            <li>No record of what arguments the model chose</li>
+            <li>Cannot determine if defaults were used</li>
+            <li>Cannot correlate across gateway and tool calls</li>
+            <li>Root cause: 14+ hours of manual log reconstruction</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="col-head">With Full Tracing</div>
+          <ul>
+            <li>Open trace by TXN ID or trace ID</li>
+            <li>See every tool call as a child span with timing</li>
+            <li>See <code style="font-family:monospace;font-size:11px;">sender_flags_input=0</code> on the scoring span</li>
+            <li>See <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code> attribute</li>
+            <li>See the <code style="font-family:monospace;font-size:11px;">risk_warning</code> event firing</li>
+            <li>Root cause: 2 minutes, one query</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 04 ════════════════════════ -->
+<section class="problem" id="objective">
+  <div class="problem-header">
+    <div class="problem-num">04</div>
+    <div class="problem-titles"><h2>Lab Objective: From Black Box to Glass Box.</h2></div>
+    <div class="problem-meta">A &rarr; B</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label scenario">The Measurable Outcome</div>
+    <div class="section-body">
+      <div class="say">
+        <p>The single measurable outcome of this lab: reproduce the Dark Tuesday bug and find the root cause in <strong>two minutes instead of fourteen hours</strong>. Everything we build is in service of that one demonstration.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th></th><th>A &mdash; before this lab</th><th>B &mdash; end of this lab</th></tr></thead>
+          <tbody>
+            <tr><td>Diagnosing a bad approval</td><td>14+ hours of log-diving</td><td>2 minutes, one trace query</td></tr>
+            <tr><td>Tool call visibility</td><td>"The agent called some tools"</td><td>Every argument, every return value, every default</td></tr>
+            <tr><td>Parameter gap detection</td><td>Invisible</td><td>Explicit attribute: <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code></td></tr>
+            <tr><td>Proactive alerting</td><td>None &mdash; compliance finds it manually</td><td>CloudWatch alarm on error rate and default-flag usage</td></tr>
+            <tr><td>Compliance answer</td><td>"We don't know why it was approved"</td><td>Full trace: who, what, when, with what parameters</td></tr>
+            <tr><td>Cost of tracing</td><td>$0 (because there is none)</td><td>~$3.90/month at NovaPay's volume</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="runsheet">
+        <table>
+          <thead><tr><th>Resource</th><th>Created At</th><th>Why</th><th>Torn Down</th></tr></thead>
+          <tbody>
+            <tr><td>IAM Role</td><td>Level 200</td><td>Lambda needs permissions to execute; Gateway needs permissions to invoke Lambda</td><td>Level 400 teardown</td></tr>
+            <tr><td>Lambda</td><td>Level 200</td><td>Three tools as MCP-callable endpoints (check_sender_history, score_transaction_risk, get_transaction_details)</td><td>Level 400 teardown</td></tr>
+            <tr><td>Cognito Pool</td><td>Level 300</td><td>JWT auth for the gateway &mdash; same pattern as Lab 8</td><td>Level 400 teardown</td></tr>
+            <tr><td>Gateway</td><td>Level 300</td><td>MCP endpoint with CUSTOM_JWT auth and SEMANTIC search</td><td>Level 400 teardown</td></tr>
+            <tr><td>Gateway Target</td><td>Level 300</td><td>Connects the Lambda to the Gateway</td><td>Level 400 teardown</td></tr>
+            <tr><td>Log Delivery (APP)</td><td>Level 300</td><td>APPLICATION_LOGS from gateway to CloudWatch Logs</td><td>Level 400 teardown</td></tr>
+            <tr><td>Log Delivery (TRACES)</td><td>Level 300</td><td>TRACES from gateway to X-Ray</td><td>Level 400 teardown</td></tr>
+            <tr><td>CloudWatch Alarms</td><td>Level 400</td><td>Proactive alerting on errors and default-flag usage</td><td>Level 400 teardown</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note-box">
+        <strong>WHY THIS ORDER MATTERS</strong>
+        Instrumented tools (Level 200) must exist before the gateway (Level 300) because the gateway invokes the Lambda. The Lambda must exist before the target. Cognito must exist before the gateway because the authorizer references its discovery URL. Log delivery must exist before you make calls through the gateway, or the first traces are lost. This is the same dependency chain as Lab 8, extended with the observability layer.
+      </div>
+
+      <div class="practices-box">
+        <h5>// what students build, in order</h5>
+        <ul>
+          <li>Write uninstrumented tools and observe the debugging experience (painful, manual, slow)</li>
+          <li>Add OTEL instrumentation with custom spans, attributes, and events to the same tools</li>
+          <li>Stand up IAM role, Lambda, Cognito &mdash; same infrastructure pattern as Lab 8</li>
+          <li>Create the AgentCore Gateway with log delivery for APPLICATION_LOGS and TRACES</li>
+          <li>Wire up the gateway target and make an end-to-end MCP call</li>
+          <li>Reproduce the Dark Tuesday bug and find the root cause from the span data</li>
+          <li>Set up CloudWatch Alarms and a sampling strategy for production</li>
+          <li>Tear down all resources in reverse order</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 05 ════════════════════════ -->
+<section class="problem" id="instrumented">
+  <div class="problem-header">
+    <div class="problem-num">05</div>
+    <div class="problem-titles"><h2>Level 200 Deep Dive: Instrumented Tools.</h2></div>
+    <div class="problem-meta">LEVEL 200<br>THE CODE</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Uninstrumented</div>
+    <div class="section-body">
+      <div class="say">
+        <p>Before we instrument, let us see what <em>not</em> instrumenting looks like. Here is <code style="font-family:monospace;font-size:14px;">score_transaction_risk</code> without any tracing. It works. It returns the right answer. And when the model calls it with default flags, you will never know.</p>
+      </div>
+
+      <div class="codewalk">
+        <div class="cw-head"><span>Uninstrumented score_transaction_risk</span><span>Python &mdash; what students see first</span></div>
+<pre><span class="tok-k">def</span> <span class="tok-f">score_transaction_risk</span>(
+    transaction_id: <span class="tok-f">str</span>,
+    amount: <span class="tok-f">float</span>,
+    sender_flags: <span class="tok-f">int</span> = <span class="tok-v">0</span>,       <span class="tok-c"># &lt;-- the dangerous default</span>
+    corridor: <span class="tok-f">str</span> = <span class="tok-s">"domestic"</span>,
+) -&gt; <span class="tok-f">dict</span>:
+    base = <span class="tok-v">20</span>
+    <span class="tok-k">if</span> amount &gt; <span class="tok-v">50_000</span>: base += <span class="tok-v">25</span>
+    <span class="tok-k">if</span> corridor != <span class="tok-s">"domestic"</span>: base += <span class="tok-v">15</span>
+    base += sender_flags * <span class="tok-v">18</span>     <span class="tok-c"># flags=3 adds 54 points</span>
+    score = <span class="tok-f">min</span>(base, <span class="tok-v">99</span>)
+    <span class="tok-k">return</span> {
+        <span class="tok-s">"transaction_id"</span>: transaction_id,
+        <span class="tok-s">"risk_score"</span>: score,
+        <span class="tok-s">"recommendation"</span>: <span class="tok-s">"block"</span> <span class="tok-k">if</span> score &gt;= <span class="tok-v">70</span> <span class="tok-k">else</span> <span class="tok-s">"approve"</span>,
+    }</pre>
+        <div class="cw-body">
+          <p><span class="cw-line">Line 4</span> &mdash; <code>sender_flags: int = 0</code>. This is the trap. If the model does not explicitly pass <code>sender_flags</code> from <code>check_sender_history</code>, the scorer silently uses zero, and a high-risk sender gets a clean score. The function is correct &mdash; it does exactly what its signature says. The bug is upstream, in the model's parameter choice.</p>
+          <p><span class="cw-line">Line 8</span> &mdash; <code>base += sender_flags * 18</code>. With <code>flags=3</code>, this adds 54 points, pushing the total to 99 (block). With <code>flags=0</code>, it adds nothing, leaving the total at 45 (approve).</p>
+        </div>
+      </div>
+
+      <div class="dothis">
+        Run the uninstrumented version. Call <code>check_sender_history("SENDER-001")</code> and then <code>score_transaction_risk("TXN-DT-091", 91500.0, corridor="NGN_GHS")</code> without passing sender_flags. Observe: the score is 45, recommendation is "approve". Now ask: "Where would you look to debug this?" &mdash; There is nothing to look at. No trace, no span, no attribute. Just the return value.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Instrumented</div>
+    <div class="section-body">
+      <div class="say">
+        <p>Now the same function, with OTEL instrumentation. The logic is identical &mdash; we have added <strong>zero business logic changes</strong>. What we have added is visibility: custom attributes that record exactly what the model chose, and an event that fires when something looks suspicious.</p>
+      </div>
+
+      <div class="codewalk">
+        <div class="cw-head"><span>Instrumented score_transaction_risk</span><span>Python &mdash; the key diff</span></div>
+<pre><span class="tok-k">from</span> opentelemetry <span class="tok-k">import</span> trace
+<span class="tok-k">from</span> opentelemetry.sdk.trace <span class="tok-k">import</span> TracerProvider
+<span class="tok-k">from</span> opentelemetry.sdk.trace.export <span class="tok-k">import</span> InMemorySpanExporter
+
+exporter = InMemorySpanExporter()
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(<span class="tok-s">"novapay.fraud"</span>)
+
+<span class="tok-k">def</span> <span class="tok-f">score_transaction_risk</span>(
+    transaction_id: <span class="tok-f">str</span>,
+    amount: <span class="tok-f">float</span>,
+    sender_flags: <span class="tok-f">int</span> = <span class="tok-v">0</span>,
+    corridor: <span class="tok-f">str</span> = <span class="tok-s">"domestic"</span>,
+) -&gt; <span class="tok-f">dict</span>:
+    <span class="tok-k">with</span> tracer.start_as_current_span(<span class="tok-s">"score_transaction_risk"</span>) <span class="tok-k">as</span> span:
+        <span class="tok-c"># Record what the model chose</span>
+        span.set_attribute(<span class="tok-s">"novapay.transaction_id"</span>, transaction_id)
+        span.set_attribute(<span class="tok-s">"novapay.amount"</span>, amount)
+        span.set_attribute(<span class="tok-s">"novapay.sender_flags_input"</span>, sender_flags)
+        span.set_attribute(<span class="tok-s">"novapay.corridor"</span>, corridor)
+        <span class="tok-c"># THIS is the root-cause indicator</span>
+        span.set_attribute(<span class="tok-s">"novapay.used_default_flags"</span>, sender_flags == <span class="tok-v">0</span>)
+
+        base = <span class="tok-v">20</span>
+        <span class="tok-k">if</span> amount &gt; <span class="tok-v">50_000</span>: base += <span class="tok-v">25</span>
+        <span class="tok-k">if</span> corridor != <span class="tok-s">"domestic"</span>: base += <span class="tok-v">15</span>
+        base += sender_flags * <span class="tok-v">18</span>
+        score = <span class="tok-f">min</span>(base, <span class="tok-v">99</span>)
+
+        <span class="tok-c"># Suspicious pattern: high amount + default flags</span>
+        <span class="tok-k">if</span> amount &gt; <span class="tok-v">50_000</span> <span class="tok-k">and</span> sender_flags == <span class="tok-v">0</span>:
+            span.add_event(<span class="tok-s">"risk_warning"</span>, {
+                <span class="tok-s">"warning"</span>: <span class="tok-s">"high_amount_with_default_flags"</span>,
+                <span class="tok-s">"amount"</span>: <span class="tok-f">str</span>(amount),
+                <span class="tok-s">"sender_flags"</span>: <span class="tok-f">str</span>(sender_flags),
+            })
+
+        span.set_attribute(<span class="tok-s">"novapay.risk_score"</span>, score)
+        span.set_attribute(<span class="tok-s">"novapay.recommendation"</span>,
+            <span class="tok-s">"block"</span> <span class="tok-k">if</span> score &gt;= <span class="tok-v">70</span> <span class="tok-k">else</span> <span class="tok-s">"approve"</span>)
+        <span class="tok-k">return</span> {<span class="tok-s">"transaction_id"</span>: transaction_id,
+                <span class="tok-s">"risk_score"</span>: score,
+                <span class="tok-s">"recommendation"</span>: <span class="tok-s">"block"</span> <span class="tok-k">if</span> score &gt;= <span class="tok-v">70</span> <span class="tok-k">else</span> <span class="tok-s">"approve"</span>}</pre>
+        <div class="cw-body">
+          <p><span class="cw-line">Line 24</span> &mdash; <code>span.set_attribute("novapay.used_default_flags", sender_flags == 0)</code>. <strong>This single attribute IS the root cause indicator.</strong> When you query your traces for <code>used_default_flags=True AND amount &gt; 50000</code>, every Dark Tuesday incident appears instantly. No log parsing. No guessing.</p>
+          <p><span class="cw-line">Lines 32-36</span> &mdash; <code>span.add_event("risk_warning", {...})</code>. The event fires a domain-specific warning when a suspicious pattern occurs: high-value transaction with default flags. Events are timestamped annotations &mdash; they tell you not just that something happened, but that the system <em>noticed</em> it was suspicious. This becomes the basis for a CloudWatch alarm in Level 400.</p>
+          <p><span class="cw-line">Lines 1-8</span> &mdash; <code>InMemorySpanExporter</code>. In development, spans are collected in memory and can be inspected programmatically. No Collector, no X-Ray account, no infrastructure. In production, you swap this for an ADOT Collector that exports to X-Ray. The instrumentation code does not change.</p>
+        </div>
+      </div>
+
+      <div class="tradeoff">
+        Instrumentation adds approximately <strong>2ms per tool call</strong> of overhead. For a fraud-scoring pipeline where the model call alone takes 800-2000ms and the tool execution takes 50-200ms, 2ms is invisible. The trade-off is maintenance: every time the tool signature changes, the span attributes must change with it. Treat your instrumentation as part of the tool's contract, not as an afterthought.
+      </div>
+
+      <div class="watchfor">
+        "Why not just add <code style="font-family:monospace;font-size:11px;">print(f"sender_flags={sender_flags}")</code>?" &mdash; This is the most important question students will ask. The answer: a print statement produces an unstructured string in a log stream. You can grep for it, but you cannot query it as a typed field, you cannot build an alarm on it, you cannot correlate it with spans from other services, and you cannot see it in a trace waterfall. Structured attributes are queryable, alertable, and correlated. That is the difference between logging and observability.
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="num">2ms</div>
+          <div class="label">Per-Span Overhead</div>
+          <div class="desc">Negligible against 800-2000ms model inference time</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">0</div>
+          <div class="label">Infrastructure Required</div>
+          <div class="desc">InMemorySpanExporter for dev. Swap to ADOT for prod.</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">1</div>
+          <div class="label">Attribute to Find the Bug</div>
+          <div class="desc">used_default_flags=True is the entire root cause</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">0</div>
+          <div class="label">Logic Changes</div>
+          <div class="desc">Same business logic. Zero behavioral difference.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 06 ════════════════════════ -->
+<section class="problem" id="gateway-obs">
+  <div class="problem-header">
+    <div class="problem-num">06</div>
+    <div class="problem-titles"><h2>Level 300 Deep Dive: Gateway Observability Wiring.</h2></div>
+    <div class="problem-meta">LEVEL 300<br>INFRASTRUCTURE</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Level 300 &middot; a</div>
+    <div class="section-body">
+      <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:10px;">The infrastructure build &mdash; same skeleton as Lab 8, extended</h3>
+
+      <div class="say">
+        <p>The first half of Level 300 is the same infrastructure as Lab 8: IAM role, Lambda, Cognito, Gateway, Target. If your students did Lab 8, they know this pattern. The new piece is <em>after</em> the gateway is created: CloudWatch log delivery. That is the observability wiring that makes the gateway's built-in tracing visible.</p>
+      </div>
+
+      <div class="era-timeline">
+        <div class="era"><div class="era-year">STEP 1</div><div class="era-content"><strong>IAM Role</strong><p>Lambda execution role + gateway invocation policy. Same as Lab 8 &mdash; least privilege, one ARN.</p></div></div>
+        <div class="era"><div class="era-year">STEP 2</div><div class="era-content"><strong>Lambda</strong><p>Three tools: check_sender_history, score_transaction_risk, get_transaction_details. Instrumented with OTEL spans.</p></div></div>
+        <div class="era"><div class="era-year">STEP 3</div><div class="era-content"><strong>Cognito</strong><p>User pool, resource server, M2M client. JWT auth for the gateway. Same pattern as Lab 8.</p></div></div>
+        <div class="era"><div class="era-year">STEP 4</div><div class="era-content"><strong>Gateway</strong><p>MCP protocol, CUSTOM_JWT authorizer, SEMANTIC search. Same create_gateway call as Lab 8.</p></div></div>
+        <div class="era"><div class="era-year">STEP 5</div><div class="era-content"><strong>Gateway Target</strong><p>Connects Lambda to Gateway. Tool names become target___tool_name.</p></div></div>
+        <div class="era"><div class="era-year">STEP 6</div><div class="era-content"><strong>Log Delivery &mdash; NEW</strong><p>Two deliveries: APPLICATION_LOGS to CloudWatch Logs, TRACES to X-Ray. This is the observability-specific addition.</p></div></div>
+      </div>
+
+      <div class="whybox">
+        Steps 1-5 are the gateway you built in Lab 8. Step 6 is what makes it observable. Without log delivery, the gateway generates telemetry internally but it goes nowhere &mdash; like a flight recorder with no one to read the tape. Log delivery connects the recorder to the ground station.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Level 300 &middot; b</div>
+    <div class="section-body">
+      <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:10px;">CloudWatch Log Delivery &mdash; the new piece</h3>
+
+      <div class="say">
+        <p>CloudWatch log delivery is a three-step process: tell CloudWatch where the logs <em>come from</em> (the source), where they should <em>go</em> (the destination), and then <em>connect</em> the two (the delivery). You do this twice &mdash; once for application logs, once for traces.</p>
+      </div>
+
+      <div class="codewalk">
+        <div class="cw-head"><span>Log Delivery Setup &mdash; APPLICATION_LOGS</span><span>Python &mdash; the critical new code</span></div>
+<pre><span class="tok-c"># Step 1: Delivery Source &mdash; "where do the logs come from?"</span>
+logs.put_delivery_source(
+    name=<span class="tok-f">f</span><span class="tok-s">"novapay-gw-app-src-{RUN_ID}"</span>,
+    resourceArn=GATEWAY_ARN,
+    logType=<span class="tok-s">"APPLICATION_LOGS"</span>,
+)
+
+<span class="tok-c"># Step 2: Delivery Destination &mdash; "where do the logs go?"</span>
+logs.put_delivery_destination(
+    name=<span class="tok-f">f</span><span class="tok-s">"novapay-gw-app-dst-{RUN_ID}"</span>,
+    outputFormat=<span class="tok-s">"json"</span>,
+    deliveryDestinationConfiguration={
+        <span class="tok-s">"destinationResourceArn"</span>: LOG_GROUP_ARN,
+    },
+)
+
+<span class="tok-c"># Step 3: Create the Delivery &mdash; "connect source to destination"</span>
+logs.create_delivery(
+    deliverySourceName=<span class="tok-f">f</span><span class="tok-s">"novapay-gw-app-src-{RUN_ID}"</span>,
+    deliveryDestinationArn=DEST_ARN,
+)</pre>
+        <div class="cw-body">
+          <p><span class="cw-line">put_delivery_source</span> &mdash; tells CloudWatch that this gateway ARN produces APPLICATION_LOGS. The <code>logType</code> parameter is critical: it must be either <code>APPLICATION_LOGS</code> (structured log events) or <code>TRACES</code> (X-Ray trace segments). Each type requires its own delivery.</p>
+          <p><span class="cw-line">put_delivery_destination</span> &mdash; tells CloudWatch where to send the logs. For APPLICATION_LOGS, the destination is a CloudWatch Log Group ARN. For TRACES, it would be an X-Ray group. The <code>outputFormat</code> of <code>json</code> ensures structured output you can query with CloudWatch Insights.</p>
+          <p><span class="cw-line">create_delivery</span> &mdash; connects the source to the destination. Until this call completes, the gateway produces telemetry but it is not routed anywhere. This is the moment the gateway becomes observable.</p>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>YOU NEED TWO DELIVERIES</strong>
+        One delivery for APPLICATION_LOGS (gateway request logs, auth events, errors) going to a CloudWatch Log Group. A second delivery for TRACES (distributed trace segments) going to X-Ray. They are independent &mdash; you can have one without the other. In this lab we set up both because the trace segments are what let you see the full span waterfall, and the application logs are what CloudWatch Alarms query against.
+      </div>
+
+      <div class="gotcha-box">
+        <h4>Log delivery has a propagation delay of 1-3 minutes.</h4>
+        <ul>
+          <li>After <code style="font-family:monospace;font-size:11px;">create_delivery</code> returns, there is a window where the delivery exists but logs have not started flowing. If students query CloudWatch immediately and see nothing, they will think the setup failed.</li>
+          <li>The lab includes a wait-and-retry pattern. Warn students before they reach this step: "The delivery is created. It takes one to three minutes before logs appear. We will make a test call and then query."</li>
+          <li>This is the same class of eventual consistency as the Cognito domain resolution in Lab 8 &mdash; AWS control plane operations are not instantaneous.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Level 300 &middot; c</div>
+    <div class="section-body">
+      <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:10px;">The end-to-end MCP call &mdash; now with tracing</h3>
+
+      <div class="copy-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+<pre class="api-code" data-lang="python"><span class="tok-k">with</span> <span class="tok-f">gateway_mcp</span>(fraud_token) <span class="tok-k">as</span> mcp_client:
+    <span class="tok-c"># Call 1: get sender history</span>
+    history = mcp_client.<span class="tok-f">call_tool_sync</span>(
+        tool_use_id=<span class="tok-f">str</span>(uuid.<span class="tok-f">uuid4</span>()),
+        name=<span class="tok-s">"novapay-tools___check_sender_history"</span>,
+        arguments={<span class="tok-s">"sender_id"</span>: <span class="tok-s">"SENDER-001"</span>},
+    )
+    <span class="tok-c"># Call 2: score risk &mdash; BUT without passing sender_flags</span>
+    result = mcp_client.<span class="tok-f">call_tool_sync</span>(
+        tool_use_id=<span class="tok-f">str</span>(uuid.<span class="tok-f">uuid4</span>()),
+        name=<span class="tok-s">"novapay-tools___score_transaction_risk"</span>,
+        arguments={
+            <span class="tok-s">"transaction_id"</span>: <span class="tok-s">"TXN-DT-091"</span>,
+            <span class="tok-s">"amount"</span>: <span class="tok-v">91500.0</span>,
+            <span class="tok-s">"corridor"</span>: <span class="tok-s">"NGN_GHS"</span>,
+            <span class="tok-c"># sender_flags NOT passed &mdash; will use default 0</span>
+        },
+    )</pre>
+      </div>
+
+      <div class="war-story" data-label="STOP AND POINT AT THE GAP">
+        Look at the two calls. The first returns sender_flags=3. The second does not receive it. In a real agent, the model would make this decision &mdash; whether to chain the output of one tool into the input of another. The model made the wrong decision: it called the tools independently. Every tool worked correctly. The orchestration failed. And the only way to see that failure is in the span data: <code style="font-family:monospace;font-size:12px;">sender_flags_input=0</code>, <code style="font-family:monospace;font-size:12px;">used_default_flags=True</code>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 07 ════════════════════════ -->
+<section class="problem" id="ab-compare">
+  <div class="problem-header">
+    <div class="problem-num">07</div>
+    <div class="problem-titles"><h2>The A/B Comparison: Finding the Bug.</h2></div>
+    <div class="problem-meta">THE PAYOFF<br>MOMENT</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label compare">Side by Side</div>
+    <div class="section-body">
+      <div class="say">
+        <p>This is the payoff. We just reproduced the Dark Tuesday bug. Now let us compare what you see with and without instrumentation. <em>This is the slide that justifies the entire lab.</em></p>
+      </div>
+
+      <div class="compare-grid">
+        <div class="col">
+          <div class="col-head">Uninstrumented Agent</div>
+          <ul>
+            <li>Return value: <code style="font-family:monospace;font-size:11px;">{"risk_score": 45, "recommendation": "approve"}</code></li>
+            <li>CloudWatch log: "Tool invoked successfully"</li>
+            <li>No record of what arguments were used</li>
+            <li>No indication that defaults were triggered</li>
+            <li>No correlation between the two tool calls</li>
+            <li>Diagnosis: "The score was 45. Why? We don't know."</li>
+            <li>Time to root cause: <strong>14 hours</strong></li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="col-head">Instrumented Agent</div>
+          <ul>
+            <li>Return value: same &mdash; <code style="font-family:monospace;font-size:11px;">{"risk_score": 45, "recommendation": "approve"}</code></li>
+            <li>Span attribute: <code style="font-family:monospace;font-size:11px;">sender_flags_input=0</code></li>
+            <li>Span attribute: <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code></li>
+            <li>Span event: <code style="font-family:monospace;font-size:11px;">risk_warning: high_amount_with_default_flags</code></li>
+            <li>Trace links both tool calls under one parent span</li>
+            <li>Diagnosis: "The model used default flags instead of chaining the output."</li>
+            <li>Time to root cause: <strong>2 minutes</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram" data-fig="FIG 7.1 &mdash; CONCEPTUAL SPAN TREE">
+<pre style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;text-align:left;display:inline-block;margin:14px 0;">
+  TRACE: fraud-scoring-session (trace_id: abc123...)
+  │
+  ├── SPAN: agent_loop (duration: 3.2s)
+  │   │
+  │   ├── SPAN: check_sender_history (duration: 120ms)
+  │   │   ├── attribute: sender_id = "SENDER-001"
+  │   │   ├── attribute: sender_flags_returned = 3
+  │   │   └── attribute: risk_level = "high"
+  │   │
+  │   └── SPAN: score_transaction_risk (duration: 85ms)
+  │       ├── attribute: transaction_id = "TXN-DT-091"
+  │       ├── attribute: amount = 91500.0
+  │       ├── attribute: sender_flags_input = 0          ← THE BUG
+  │       ├── attribute: used_default_flags = True       ← ROOT CAUSE
+  │       ├── attribute: corridor = "NGN_GHS"
+  │       ├── attribute: risk_score = 45
+  │       ├── attribute: recommendation = "approve"
+  │       └── event: risk_warning
+  │           ├── warning = "high_amount_with_default_flags"
+  │           ├── amount = "91500.0"
+  │           └── sender_flags = "0"
+  │
+  └── SPAN: gateway_request (duration: 205ms)
+      ├── attribute: auth.client_id = "fraud-ops-client"
+      ├── attribute: auth.scopes = "fraud.read fraud.write"
+      └── attribute: target = "novapay-tools"</pre>
+      </div>
+
+      <div class="whybox">
+        The LLM made a correct-looking decision based on incomplete data. It called both tools. Both returned correct results. The approval looked reasonable &mdash; a score of 45 is well under the 70 threshold. Without tracing, you would blame the scoring model or the threshold. With tracing, you see instantly that the model never connected the two calls. The bug is in the gap &mdash; and the gap only exists in the trace data.
+      </div>
+
+      <div class="askroom">
+        "Looking at the span tree, what would you search for to find every instance of this bug across all transactions?"
+        <span class="expect">The answer: query for <code style="font-family:monospace;font-size:11px;">used_default_flags=True AND amount > 50000</code>. This catches every Dark Tuesday pattern, past and future. In CloudWatch Insights, this is a single query. Without structured attributes, this search is impossible.</span>
+      </div>
+
+      <div class="big-quote">
+        The model is not buggy. The tools are not buggy. The gap between them is the bug. And the gap only becomes visible with instrumentation.
+        <cite>// the sentence that lands the lab</cite>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 08 ════════════════════════ -->
+<section class="problem" id="prod-ops">
+  <div class="problem-header">
+    <div class="problem-num">08</div>
+    <div class="problem-titles"><h2>Level 400: Production Operations.</h2></div>
+    <div class="problem-meta">LEVEL 400<br>OPERATING IT</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label real">CloudWatch Alarms</div>
+    <div class="section-body">
+      <div class="say">
+        <p>Tracing tells you what happened after someone asks. Alarms tell you something happened <em>before</em> anyone asks. In a regulated business, the difference between "we found it" and "compliance found it" is the difference between an internal fix and a regulatory incident.</p>
+      </div>
+
+      <div class="pattern-grid">
+        <div class="pattern-card">
+          <div class="pc-num">ALARM 01</div>
+          <h4>Error Rate Spike</h4>
+          <p>Metric filter on the APPLICATION_LOGS group for <code style="font-family:monospace;font-size:11px;">status=ERROR</code>. Threshold: more than 5 errors in any 5-minute window. Catches tool failures, auth rejections, and gateway errors before they cascade.</p>
+          <div class="when">FIRES WHEN: tools start failing or auth is misconfigured</div>
+        </div>
+        <div class="pattern-card">
+          <div class="pc-num">ALARM 02</div>
+          <h4>Default-Flag Usage</h4>
+          <p>Custom metric on <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code> events in the trace data. Threshold: any occurrence on a transaction above $50K. This alarm would have caught Dark Tuesday within minutes of it happening.</p>
+          <div class="when">FIRES WHEN: the model uses default parameters on high-value transactions</div>
+        </div>
+        <div class="pattern-card">
+          <div class="pc-num">ALARM 03</div>
+          <h4>Latency SLA</h4>
+          <p>P99 latency on gateway tool calls exceeding 5 seconds. Catches Lambda cold starts, backend degradation, or retry storms before they affect the user experience.</p>
+          <div class="when">FIRES WHEN: something in the pipeline is slow</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label real">Sampling Strategy</div>
+    <div class="section-body">
+      <div class="say">
+        <p>You cannot trace everything. At NovaPay's volume, tracing every transaction would cost more than the transactions themselves. But you <em>must</em> trace failures and high-value operations. The sampling strategy is the trade-off between cost and debuggability.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Category</th><th>Sample Rate</th><th>Rationale</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline</td><td>10%</td><td>Enough to build latency distributions and detect trends. Low enough to keep costs manageable.</td></tr>
+            <tr><td>High-value (&gt;$50K)</td><td>100%</td><td>Regulatory requirement: every high-value transaction must be auditable. Dark Tuesday was a $91,500 transaction.</td></tr>
+            <tr><td>Errors</td><td>100%</td><td>Every error is traced. You cannot debug what you did not capture. Errors are rare enough that 100% sampling is cheap.</td></tr>
+            <tr><td>Cross-border</td><td>100%</td><td>Compliance reporting requirement for cross-border corridors. The NGN-GHS corridor in Dark Tuesday would always be traced.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tradeoff">
+        The baseline rate of 10% means you will miss 90% of routine transactions. If a low-value, domestic transaction triggers a subtle bug, you may not have the trace. The alternative &mdash; 100% baseline &mdash; costs roughly 10x more (~$39/month vs ~$3.90/month at NovaPay's volume). For most businesses, the 10% baseline with 100% on errors and high-value is the right starting point. <strong>Adjust after you see real traffic patterns</strong>, not before.
+      </div>
+
+      <div class="note-box">
+        <strong>X-RAY SAMPLING RULES</strong>
+        X-Ray supports rule-based sampling: you can set different rates for different URL patterns, HTTP methods, or custom attributes. The lab demonstrates this with a rule that samples 100% of requests where the path matches <code style="font-family:monospace;font-size:11px;">/high-value/*</code> and 10% for everything else. The rules are evaluated server-side, so the client does not need to make sampling decisions.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label real">Cost Analysis</div>
+    <div class="section-body">
+      <div class="say">
+        <p>The question every executive asks: "How much does this cost?" Here is the honest answer for NovaPay's volume.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Component</th><th>Unit Cost</th><th>NovaPay Volume</th><th>Monthly Cost</th></tr></thead>
+          <tbody>
+            <tr><td>CloudWatch Logs (ingestion)</td><td>$0.50 / GB</td><td>~2 GB/month</td><td>$1.00</td></tr>
+            <tr><td>CloudWatch Logs (storage)</td><td>$0.03 / GB/month</td><td>~2 GB retained 30 days</td><td>$0.06</td></tr>
+            <tr><td>X-Ray traces (recorded)</td><td>$5.00 / million</td><td>~500K traces/month (with sampling)</td><td>$2.50</td></tr>
+            <tr><td>X-Ray traces (scanned)</td><td>$0.50 / million</td><td>~200K queries/month</td><td>$0.10</td></tr>
+            <tr><td>CloudWatch Alarms</td><td>$0.10 / alarm/month</td><td>3 alarms</td><td>$0.30</td></tr>
+            <tr><td colspan="3" style="font-weight:700;text-align:right;">Total</td><td style="font-weight:700;">~$3.96/month</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="war-story" data-label="THE COST ARGUMENT">
+        Dark Tuesday cost NovaPay $91,500 in exposure, 14 hours of engineering time (~$2,800 at loaded cost), and a compliance incident report. Observability costs $3.96 per month. The ROI conversation ends here.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label fsm">Session Correlation</div>
+    <div class="section-body">
+      <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:10px;">OTEL Baggage &mdash; stitching traces across boundaries</h3>
+
+      <div class="say">
+        <p>When a customer session spans multiple agents or multiple gateway calls, you need a common identifier that travels with the request. OTEL Baggage is the standard mechanism &mdash; a key-value pair that propagates across process boundaries.</p>
+      </div>
+
+      <div class="copy-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">COPY</button>
+<pre class="api-code" data-lang="python"><span class="tok-k">from</span> opentelemetry <span class="tok-k">import</span> baggage
+<span class="tok-k">from</span> opentelemetry.context <span class="tok-k">import</span> attach, detach
+
+<span class="tok-c"># Set a session ID that follows the trace across all services</span>
+ctx = baggage.set_baggage(<span class="tok-s">"novapay.session_id"</span>, session_id)
+token = attach(ctx)
+
+<span class="tok-k">try</span>:
+    <span class="tok-c"># All spans created in this context carry the session_id</span>
+    <span class="tok-k">with</span> tracer.start_as_current_span(<span class="tok-s">"fraud_check_session"</span>) <span class="tok-k">as</span> span:
+        span.set_attribute(<span class="tok-s">"novapay.session_id"</span>, session_id)
+        <span class="tok-c"># ... tool calls happen here ...</span>
+<span class="tok-k">finally</span>:
+    detach(token)</pre>
+      </div>
+
+      <div class="whybox">
+        In Dark Tuesday, the fraud-scoring agent was one of three agents involved in the customer's session. The support agent had already pulled the customer's profile. The collections agent had flagged a related account. Without session correlation, these three traces are isolated islands. With baggage carrying <code style="font-family:monospace;font-size:12px;">novapay.session_id</code>, you can query "show me everything that happened in this customer's session" and see all three agents' traces in one view.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 09 ════════════════════════ -->
+<section class="problem" id="patterns">
+  <div class="problem-header">
+    <div class="problem-num">09</div>
+    <div class="problem-titles"><h2>Production Patterns &amp; Failure Modes.</h2></div>
+    <div class="problem-meta">LEVEL 400<br>WHAT BREAKS</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label real">Operational Patterns</div>
+    <div class="section-body">
+      <div class="pattern-grid">
+        <div class="pattern-card">
+          <div class="pc-num">PATTERN 01</div>
+          <h4>Alert &rarr; Investigate &rarr; Reproduce &rarr; Fix</h4>
+          <p>CloudWatch Alarm fires (default-flag usage on high-value). Open the trace by alarm context. See the span tree with the parameter gap. Reproduce in staging with the same inputs. Fix the agent's tool-chaining prompt. Deploy. Verify the alarm stops firing.</p>
+          <div class="when">THE STANDARD INCIDENT RESPONSE PIPELINE</div>
+        </div>
+        <div class="pattern-card">
+          <div class="pc-num">PATTERN 02</div>
+          <h4>Proactive Dashboard Monitoring</h4>
+          <p>Build a CloudWatch dashboard tracking: default-parameter usage rate, error rate by tool, P50/P99 latency by tool, trace count vs expected volume. Review weekly. Catch drift before it becomes an incident.</p>
+          <div class="when">THE "WE CAUGHT IT BEFORE COMPLIANCE DID" PATTERN</div>
+        </div>
+        <div class="pattern-card">
+          <div class="pc-num">PATTERN 03</div>
+          <h4>Trace-Driven Development</h4>
+          <p>When adding a new tool, write the span attributes <em>before</em> the business logic. Define what you need to see in a trace to debug this tool, then build the tool. Instrumentation is a design activity, not an afterthought.</p>
+          <div class="when">SHIFT-LEFT OBSERVABILITY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label scenario">Failure Modes</div>
+    <div class="section-body">
+      <div class="say">
+        <p>Observability is infrastructure, and infrastructure fails. Here are the three failure modes a principal architect is expected to anticipate <em>before</em> they ship.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Failure Mode</th><th>What Happens</th><th>How You Know</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>Sampling misses the incident</td><td>A 10% sample rate means a specific failing transaction may not be traced. Root-cause analysis is impossible without the trace.</td><td>You get an alert from a metric (error count) but cannot find the trace to investigate.</td><td>Always sample 100% for errors and high-value transactions. Use head-based sampling that decides at the start of the request, not tail-based.</td></tr>
+            <tr><td>Log delivery lag</td><td>CloudWatch log delivery has 1-3 minutes of propagation delay. During an active incident, the most recent logs are not yet queryable.</td><td>You query CloudWatch Insights and the latest entries are 2 minutes old. The incident is happening now.</td><td>InMemorySpanExporter in the agent gives immediate, in-process access to spans. Use it for real-time debugging; CloudWatch for historical analysis.</td></tr>
+            <tr><td>Span attributes too large</td><td>X-Ray has a 64KB segment size limit. If you attach large payloads (full request/response bodies) as span attributes, the segment is silently truncated or dropped.</td><td>Traces appear with missing spans or truncated attributes. The most detailed traces &mdash; the ones you need most &mdash; are the ones most likely to exceed the limit.</td><td>Keep attributes small: IDs, scores, booleans, short strings. Use span events for richer contextual data. Never attach full request/response bodies as attributes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gotcha-box">
+        <h4>The observability tax &mdash; the ongoing cost nobody budgets for.</h4>
+        <ul>
+          <li>Every time a tool's signature changes, the span attributes must change with it. If you add a parameter, you need a new attribute. If you rename one, the old attribute becomes stale and queries break.</li>
+          <li>This is a maintenance burden that scales linearly with the number of instrumented tools. At NovaPay's current 6 tools, it is trivial. At 31 tools across six teams, it requires a shared library and a testing strategy.</li>
+          <li>Budget for it. Include instrumentation updates in every tool-change PR. Treat span attributes as a published API: changing one is a breaking change for anyone querying it.</li>
+        </ul>
+      </div>
+
+      <div class="tradeoff">
+        There is a tension between <strong>observability depth</strong> and <strong>noise</strong>. Instrument everything and you have 200 attributes per span, most of which nobody ever queries. Instrument too little and the one attribute you need is the one you did not add. The heuristic: instrument the <em>decision points</em> &mdash; the places where the model makes a choice (which tool, which parameters, whether to chain) and the places where a default value could mask a bug. If you find yourself adding an attribute "just in case," stop. Add it when a real incident proves you need it.
+      </div>
+
+      <div class="analogy-box">
+        <div class="setup">The observability tax is like maintaining a fire suppression system.</div>
+        <p>You test it quarterly. You replace the sensors when you renovate a floor. You never question the cost &mdash; because the one time you need it and it is not there, the building burns down. But you also do not install sprinklers in the parking garage. You instrument the decision points, not every square foot.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ 10 ════════════════════════ -->
+<section class="problem" id="knowledge">
+  <div class="problem-header">
+    <div class="problem-num">10</div>
+    <div class="problem-titles"><h2>Knowledge Check &amp; Customer Questions.</h2></div>
+    <div class="problem-meta">CHECK<br>UNDERSTANDING</div>
+  </div>
+
+  <div class="section">
+    <div class="section-label concept">Concept Questions</div>
+    <div class="section-body">
+      <div class="practices-box">
+        <h5>// five concept questions &mdash; ask before declaring the module complete</h5>
+        <ul>
+          <li>What is the difference between a trace and a span? Use the Dark Tuesday example.</li>
+          <li>Why are structured span attributes better than log lines for diagnosing agent bugs?</li>
+          <li>Explain the sampling trade-off: why not trace 100% of everything?</li>
+          <li>What are the three steps to set up CloudWatch log delivery for a gateway?</li>
+          <li>Why does the <code style="font-family:monospace;font-size:12px;">used_default_flags</code> attribute matter more than the <code style="font-family:monospace;font-size:12px;">risk_score</code> attribute?</li>
+        </ul>
+      </div>
+
+      <h3 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800;margin:26px 0 14px;">Answers</h3>
+      <div class="fsm-grid" style="grid-template-columns:1fr;">
+        <div class="fsm-term"><div class="term">1 &middot; Trace vs Span</div><p>A trace is the full lifecycle of the fraud-scoring session for TXN-DT-091 &mdash; from agent invocation through both tool calls to the final approval. A span is one unit of work within that trace: <code style="font-family:monospace;font-size:11px;">check_sender_history</code> is a span, <code style="font-family:monospace;font-size:11px;">score_transaction_risk</code> is another span, and the agent loop itself is their parent span. Spans nest to form a tree; the trace is the tree.</p></div>
+        <div class="fsm-term"><div class="term">2 &middot; Attributes vs Log Lines</div><p>Log lines are unstructured text: <code style="font-family:monospace;font-size:11px;">INFO: sender_flags=0</code>. You can grep for it, but you cannot query "show me all traces where sender_flags=0 AND amount>50000" without parsing. Span attributes are typed key-value pairs: <code style="font-family:monospace;font-size:11px;">novapay.sender_flags_input=0</code> (integer). You can query, filter, aggregate, and alarm on them directly. CloudWatch Insights, X-Ray, and every OTEL-compatible backend understands them natively.</p></div>
+        <div class="fsm-term"><div class="term">3 &middot; Sampling Trade-Off</div><p>At NovaPay's volume, 100% tracing costs ~$39/month. At 10% baseline with 100% for errors and high-value, it costs ~$3.96/month. The risk: a low-value domestic transaction triggers a subtle bug, and you have a 90% chance of not having the trace. The mitigation: 100% sampling on errors (the bug will be traced on its next occurrence) and on high-value transactions (where the business risk justifies the cost).</p></div>
+        <div class="fsm-term"><div class="term">4 &middot; Three Steps for Log Delivery</div><p>(a) <code style="font-family:monospace;font-size:11px;">put_delivery_source</code> &mdash; tells CloudWatch that this gateway ARN produces logs of a specific type (APPLICATION_LOGS or TRACES). (b) <code style="font-family:monospace;font-size:11px;">put_delivery_destination</code> &mdash; tells CloudWatch where to send them (a Log Group ARN or X-Ray). (c) <code style="font-family:monospace;font-size:11px;">create_delivery</code> &mdash; connects the source to the destination. Two deliveries total: one for app logs, one for traces.</p></div>
+        <div class="fsm-term"><div class="term">5 &middot; Why used_default_flags Matters More</div><p>The risk score (45) tells you the outcome. The <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code> attribute tells you the <em>cause</em>. The score is correct given its inputs &mdash; the bug is that the inputs were wrong. Without the default-flag indicator, you would investigate the scoring algorithm, the threshold, the business rules &mdash; everything except the actual problem, which is that the model did not chain the tools. The root-cause attribute points you to the gap, not the symptom.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label career">Customer Scenarios</div>
+    <div class="section-body">
+      <div class="industry-grid">
+        <div class="industry-card">
+          <div class="ic-sector">Scenario 01</div>
+          <h4>"Can we prove no unauthorized transactions were approved last month?"</h4>
+          <p>NovaPay's compliance team asks this quarterly. Before this lab: "We checked the logs and did not find anything." After: query X-Ray for all traces where <code style="font-family:monospace;font-size:11px;">used_default_flags=True</code> in the last 30 days, filtered by <code style="font-family:monospace;font-size:11px;">amount>50000</code>. The result set is the definitive answer &mdash; zero results means zero incidents.</p>
+          <div class="impact">&rarr; From "we believe so" to "here is the query and the empty result set"</div>
+        </div>
+        <div class="industry-card">
+          <div class="ic-sector">Scenario 02</div>
+          <h4>"Our agent is slower than it used to be. What changed?"</h4>
+          <p>Without tracing: "Something is slow." With tracing: open the P99 latency dashboard by tool. See that <code style="font-family:monospace;font-size:11px;">check_sender_history</code> jumped from 120ms to 850ms last Thursday. Correlate with the deployment log: the backend team added a new index that is still building. Root cause found in 5 minutes.</p>
+          <div class="impact">&rarr; Per-tool latency attribution, not aggregate guessing</div>
+        </div>
+        <div class="industry-card">
+          <div class="ic-sector">Scenario 03</div>
+          <h4>"We want to add a new tool. How do we make it observable from day one?"</h4>
+          <p>Follow the trace-driven development pattern: define the span attributes before writing the business logic. What decisions does this tool make? What defaults could mask bugs? What values does compliance need to audit? Write those as <code style="font-family:monospace;font-size:11px;">set_attribute</code> calls, then build the tool around them.</p>
+          <div class="impact">&rarr; Instrumentation as a design activity, not a retrofit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label why">The Arc</div>
+    <div class="section-body">
+      <div class="say">
+        <p>This is a good moment to step back and name the arc across Labs 7, 8, and 9.</p>
+      </div>
+
+      <div class="concept-table">
+        <table>
+          <thead><tr><th>Lab</th><th>Capability</th><th>What It Gave NovaPay</th></tr></thead>
+          <tbody>
+            <tr><td>Lab 7 &mdash; Memory</td><td>Recall</td><td>Agents remember context across sessions. No more "please repeat your account number."</td></tr>
+            <tr><td>Lab 8 &mdash; Gateway</td><td>Governance</td><td>One front door, zero agent-held credentials, per-call identity, least-privilege enforcement.</td></tr>
+            <tr><td>Lab 9 &mdash; Observability</td><td>Accountability</td><td>Every decision is traceable. Every parameter choice is recorded. Every incident is diagnosable.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="big-quote">
+        Memory gave agents recall. Gateway gave them governance. Observability gives them accountability. A production agent system needs all three.
+        <cite>// the arc across Labs 7&ndash;8&ndash;9</cite>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ OUTRO ════════════════════════ -->
+<footer class="outro">
+  <h2>From black box <em>to glass box.</em></h2>
+  <p>Fourteen hours became two minutes. An unanswerable question became a single query. And the next Dark Tuesday triggers an alarm before compliance opens their laptop.</p>
+  <p>The tools worked. The model worked. The gap between them was invisible &mdash; until it was instrumented. That is the lesson.</p>
+  <div class="sig">// NovaPay AI Agent Training &middot; Lab 9</div>
+</footer>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.copy-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'COPIED';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+</script>
+</div>
+</body>
+</html>
